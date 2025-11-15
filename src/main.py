@@ -2,12 +2,19 @@ import time
 from typing import Any, Callable, TypeVar, Dict, AsyncGenerator
 from contextlib import asynccontextmanager
 import uvicorn
-from fastapi import FastAPI, Request, Response, APIRouter
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from src.config import settings
 from src.utils.db import init_models, async_session, async_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.utils.logger import logger
+
+# Import all models to ensure relationships are properly registered
+from src.auth.model import User, UserDetails, OTPCode  # noqa: F401
+from src.chat.model import ChatSession, ChatMessage  # noqa: F401
+
+# Import auth router
+from src.auth.routes.auth_routes import router as auth_router
 
 description = """
 astro-server API's
@@ -103,23 +110,8 @@ async def process_time_log_middleware(
     return response
 
 
-## Minimal routers for demonstration
-login_router = APIRouter(prefix="/auth", tags=["auth"])
-register_router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-@login_router.post("/login")
-async def _login() -> Dict[str, str]:
-    return {"detail": "login endpoint (stub)"}
-
-
-@register_router.post("/register")
-async def _register() -> Dict[str, str]:
-    return {"detail": "register endpoint (stub)"}
-
-
-app.include_router(login_router)
-app.include_router(register_router)
+# Include auth router
+app.include_router(auth_router)
 
 if __name__ == "__main__":
     # When running locally, pass the app object directly to uvicorn.run

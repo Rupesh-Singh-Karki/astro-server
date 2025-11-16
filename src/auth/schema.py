@@ -66,6 +66,12 @@ class UserDetailsCreate(UserDetailsBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserDetailsRegister(UserDetailsBase):
+    """Schema for registering UserDetails (user_id will be taken from authenticated user)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserDetailsRead(UserDetailsBase):
     """Schema for reading UserDetails."""
 

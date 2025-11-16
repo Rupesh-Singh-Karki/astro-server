@@ -1,10 +1,11 @@
+from datetime import date, time
 from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.model import User
+from src.auth.model import User, UserDetails
 from src.auth.schema import UserRead, TokenResponse
 from src.auth.services.otp_service import otp_service
 from src.auth.services.email_service import email_service
@@ -123,6 +124,68 @@ class AuthService:
 
         log.info(f"User authenticated successfully: {user.email}")
         return True, None, token_response
+
+    async def create_user_details(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        full_name: str,
+        gender: str,
+        marital_status: str,
+        date_of_birth: date,
+        time_of_birth: time,
+        place_of_birth: str,
+        timezone: str,
+    ) -> UserDetails:
+        """
+        Create user details for a user.
+
+        Args:
+            db: Database session
+            user_id: User's ID
+            full_name: Full name
+            gender: Gender
+            marital_status: Marital status
+            date_of_birth: Date of birth
+            time_of_birth: Time of birth
+            place_of_birth: Place of birth
+            timezone: Timezone
+
+        Returns:
+            Created UserDetails object
+        """
+        user_details = UserDetails(
+            user_id=user_id,
+            full_name=full_name,
+            gender=gender,
+            marital_status=marital_status,
+            date_of_birth=date_of_birth,
+            time_of_birth=time_of_birth,
+            place_of_birth=place_of_birth,
+            timezone=timezone,
+        )
+        db.add(user_details)
+        await db.commit()
+        await db.refresh(user_details)
+        log.info(f"Created user details for user_id: {user_id}")
+        return user_details
+
+    async def get_user_details(
+        self, db: AsyncSession, user_id: UUID
+    ) -> Optional[UserDetails]:
+        """
+        Get user details by user ID.
+
+        Args:
+            db: Database session
+            user_id: User's ID
+
+        Returns:
+            UserDetails object or None if not found
+        """
+        stmt = select(UserDetails).where(UserDetails.user_id == user_id)
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
 
 
 # Singleton instance

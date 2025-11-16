@@ -9,6 +9,8 @@ from src.auth.schema import (
     VerifyOTPRequest,
     TokenResponse,
     UserRead,
+    UserDetailsRegister,
+    UserDetailsRead,
 )
 from src.auth.services.auth_service import auth_service
 from src.auth.services.dependencies import get_current_user
@@ -29,9 +31,9 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     description="Send a one-time password (OTP) to the specified email address for authentication.",
 )
 async def send_otp(
-    request: SendOTPRequest,
+    request: SendOTPRequest,  # intead of async def send_otp(email: str):
     db: AsyncSession = Depends(get_db),
-) -> SendOTPResponse:
+) -> SendOTPResponse:  # yaha humne response define kar diya
     """
     Send OTP to the user's email address.
 
@@ -155,3 +157,79 @@ async def verify_token(
         "user_id": str(current_user.id),
         "email": current_user.email,
     }
+
+
+@router.post(
+    "/register-details",
+    response_model=UserDetailsRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register user details",
+    description="Register detailed information for the authenticated user.",
+)
+async def register_user_details(
+    user_details: UserDetailsRegister,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserDetailsRead:
+    """
+    Register user details for the authenticated user.
+
+    - **full_name**: Full name of the user
+    - **gender**: Gender (male/female/other)
+    - **marital_status**: Marital status (single/married)
+    - **date_of_birth**: Date of birth
+    - **time_of_birth**: Time of birth
+    - **place_of_birth**: Place of birth
+    - **timezone**: Timezone
+
+    Requires valid JWT token in Authorization header.
+    """
+    # Check if user details already exist
+    existing_details = await auth_service.get_user_details(db, current_user.id)
+    if existing_details:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User details already exist. Use the update endpoint to modify them.",
+        )
+
+    # Create user details
+    created_details = await auth_service.create_user_details(
+        db=db,
+        user_id=current_user.id,
+        full_name=user_details.full_name,
+        gender=user_details.gender,
+        marital_status=user_details.marital_status,
+        date_of_birth=user_details.date_of_birth,
+        time_of_birth=user_details.time_of_birth,
+        place_of_birth=user_details.place_of_birth,
+        timezone=user_details.timezone,
+    )
+
+    log.info(f"User details registered for user: {current_user.email}")
+    return UserDetailsRead.model_validate(created_details)
+
+
+@router.get(
+    "/user-details",
+    response_model=UserDetailsRead,
+    status_code=status.HTTP_200_OK,
+    summary="Get user details",
+    description="Get detailed information for the authenticated user.",
+)
+async def get_user_details(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserDetailsRead:
+    """
+    Get user details for the authenticated user.
+
+    Requires valid JWT token in Authorization header.
+    """
+    user_details = await auth_service.get_user_details(db, current_user.id)
+    if not user_details:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User details not found. Please register your details first.",
+        )
+
+    return UserDetailsRead.model_validate(user_details)

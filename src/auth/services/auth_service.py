@@ -127,7 +127,9 @@ class AuthService:
             has_profile=has_profile,
         )
 
-        log.info(f"User authenticated successfully: {user.email} (has_profile={has_profile})")
+        log.info(
+            f"User authenticated successfully: {user.email} (has_profile={has_profile})"
+        )
         return True, None, token_response
 
     async def create_user_details(

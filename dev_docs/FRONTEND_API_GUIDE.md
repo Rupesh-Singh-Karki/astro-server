@@ -97,9 +97,13 @@ async function requestOTP(email: string) {
     "email": "user@example.com",
     "is_email_verified": true,
     "created_at": "2025-11-17T10:30:00Z"
-  }
+  },
+  "has_profile": false
 }
 ```
+
+**Response Fields:**
+- `has_profile` (boolean): `false` = first-time user (needs to complete profile), `true` = returning user (profile already exists)
 
 **Frontend Usage:**
 ```typescript
@@ -118,14 +122,12 @@ async function verifyOTP(email: string, otp: string) {
     localStorage.setItem('access_token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
     
-    // Check if user needs to complete profile
-    const hasProfile = await checkUserProfile(data.access_token);
-    
-    if (!hasProfile) {
-      // New user - redirect to profile setup
+    // Check if user has completed profile (NEW: use has_profile flag)
+    if (!data.has_profile) {
+      // First-time user - redirect to profile setup
       navigateToProfileSetup();
     } else {
-      // Existing user - redirect to chat
+      // Returning user - redirect to chat
       navigateToChat();
     }
   } else {

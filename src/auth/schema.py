@@ -171,6 +171,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: UserRead
+    has_profile: bool = False  # True if user has completed profile details
 
     model_config = ConfigDict(from_attributes=True)
 

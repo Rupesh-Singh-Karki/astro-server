@@ -110,6 +110,10 @@ class AuthService:
         if not user.is_email_verified:
             user = await self.verify_user_email(db, user)
 
+        # Check if user has completed profile details
+        user_details = await self.get_user_details(db, user.id)
+        has_profile = user_details is not None
+
         # Generate access token
         access_token = create_access_token(identity=str(user.id))
 
@@ -120,9 +124,10 @@ class AuthService:
             expires_in=settings.jwt_access_token_expire_minutes
             * 60,  # Convert to seconds
             user=UserRead.model_validate(user),
+            has_profile=has_profile,
         )
 
-        log.info(f"User authenticated successfully: {user.email}")
+        log.info(f"User authenticated successfully: {user.email} (has_profile={has_profile})")
         return True, None, token_response
 
     async def create_user_details(

@@ -12,6 +12,7 @@ Complete reference for all available API endpoints in the astro-server applicati
 
 1. [Health Check](#health-check)
 2. [Authentication Endpoints](#authentication-endpoints)
+   - [Detecting First-Time Users](#detecting-first-time-users)
 3. [Chat & Astrology Endpoints](#chat--astrology-endpoints)
 
 ---
@@ -42,6 +43,26 @@ GET / HTTP/1.1
 ## Authentication Endpoints
 
 All authentication endpoints are prefixed with `/auth`.
+
+### Detecting First-Time Users
+
+The `/auth/verify-otp` endpoint returns a `has_profile` boolean field that indicates whether the user has completed their profile:
+
+- **`has_profile: false`** → First-time user who needs to complete profile via `/auth/register-details`
+- **`has_profile: true`** → Returning user with existing profile who can directly access chat features
+
+This eliminates the need for an additional API call to check profile status. Simply check the `has_profile` field in the verify-otp response to determine the user's onboarding flow.
+
+**Example Response:**
+```json
+{
+  "access_token": "...",
+  "has_profile": false,  // ← Check this field
+  "user": {...}
+}
+```
+
+---
 
 ### POST `/auth/send-otp`
 
@@ -103,9 +124,17 @@ Verify the OTP sent to the email and return an access token if valid.
     "is_email_verified": true,
     "created_at": "2025-11-17T10:30:00Z",
     "updated_at": "2025-11-17T10:30:00Z"
-  }
+  },
+  "has_profile": false
 }
 ```
+
+**Response Fields:**
+- `access_token` - JWT token for authentication
+- `token_type` - Always "bearer"
+- `expires_in` - Token expiration time in seconds
+- `user` - User information
+- `has_profile` - **Boolean indicating if user has completed profile details** (false = first-time user, true = returning user)
 
 **Error Responses:**
 - `401 Unauthorized` - Invalid OTP
@@ -603,8 +632,10 @@ curl -X GET http://localhost:8000/chat/sessions/550e8400-e29b-41d4-a716-44665544
 ## Authentication Flow
 
 1. **Send OTP**: `POST /auth/send-otp` with email
-2. **Verify OTP**: `POST /auth/verify-otp` with email and OTP → Receive access token
-3. **Register Details**: `POST /auth/register-details` with user profile (required for chat)
+2. **Verify OTP**: `POST /auth/verify-otp` with email and OTP → Receive access token + `has_profile` flag
+   - `has_profile: false` → First-time user, redirect to profile setup
+   - `has_profile: true` → Returning user, redirect to chat
+3. **Register Details** (if `has_profile: false`): `POST /auth/register-details` with user profile (required for chat)
 4. **Use Chat**: `POST /chat/astrologer` with access token in Authorization header
 
 ---

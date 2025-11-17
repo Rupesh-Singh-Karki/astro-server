@@ -3,6 +3,7 @@
 import pytest
 from datetime import date, time
 from uuid import uuid4
+from typing import Any
 
 from src.chat.services.chat_service import chat_service
 from src.chat.services.astrology_service import astrology_service
@@ -10,7 +11,7 @@ from src.chat.model import MessageSenderEnum
 
 
 @pytest.mark.asyncio
-async def test_create_chat_session(db):
+async def test_create_chat_session(db: Any) -> None:
     """Test creating a new chat session."""
     user_id = uuid4()
     title = "Test astrology question"
@@ -24,7 +25,7 @@ async def test_create_chat_session(db):
 
 
 @pytest.mark.asyncio
-async def test_get_chat_session(db):
+async def test_get_chat_session(db: Any) -> None:
     """Test retrieving a chat session."""
     user_id = uuid4()
     title = "Test session"
@@ -42,7 +43,7 @@ async def test_get_chat_session(db):
 
 
 @pytest.mark.asyncio
-async def test_get_session_wrong_user(db):
+async def test_get_session_wrong_user(db: Any) -> None:
     """Test retrieving a session with wrong user ID returns None."""
     user_id = uuid4()
     wrong_user_id = uuid4()
@@ -57,8 +58,8 @@ async def test_get_session_wrong_user(db):
 
 
 @pytest.mark.asyncio
-async def test_add_message_to_session(db):
-    """Test adding a message to a chat session."""
+async def test_add_message_to_session(db: Any) -> None:
+    """Test adding messages to a chat session."""
     user_id = uuid4()
 
     # Create session
@@ -84,8 +85,8 @@ async def test_add_message_to_session(db):
 
 
 @pytest.mark.asyncio
-async def test_get_session_messages(db):
-    """Test retrieving all messages from a session."""
+async def test_get_session_messages(db: Any) -> None:
+    """Test retrieving all messages for a session."""
     user_id = uuid4()
 
     # Create session
@@ -112,7 +113,7 @@ async def test_get_session_messages(db):
 
 
 @pytest.mark.asyncio
-async def test_get_user_sessions(db):
+async def test_get_user_sessions(db: Any) -> None:
     """Test retrieving all sessions for a user."""
     user_id = uuid4()
 
@@ -132,7 +133,7 @@ async def test_get_user_sessions(db):
 
 
 @pytest.mark.asyncio
-async def test_get_user_sessions_limit(db):
+async def test_get_user_sessions_limit(db: Any) -> None:
     """Test that get_user_sessions respects limit parameter."""
     user_id = uuid4()
 
@@ -147,7 +148,7 @@ async def test_get_user_sessions_limit(db):
 
 
 @pytest.mark.asyncio
-async def test_update_session_title(db):
+async def test_update_session_title(db: Any) -> None:
     """Test updating a session title."""
     user_id = uuid4()
 
@@ -164,7 +165,7 @@ async def test_update_session_title(db):
 
 
 @pytest.mark.asyncio
-async def test_delete_session(db):
+async def test_delete_session(db: Any) -> None:
     """Test deleting a chat session."""
     user_id = uuid4()
 
@@ -184,7 +185,7 @@ async def test_delete_session(db):
     assert deleted is None
 
 
-def test_compute_kundli():
+def test_compute_kundli() -> None:
     """Test kundli computation with valid birth data."""
     birth_data = {
         "date_of_birth": date(1990, 5, 15),
@@ -206,7 +207,7 @@ def test_compute_kundli():
     assert len(result) > 0
 
 
-def test_compute_kundli_with_different_location():
+def test_compute_kundli_with_different_location() -> None:
     """Test kundli computation with different location."""
     birth_data = {
         "date_of_birth": date(2004, 12, 27),
@@ -221,7 +222,7 @@ def test_compute_kundli_with_different_location():
     assert "birth_details" in result
 
 
-def test_compute_kundli_invalid_place():
+def test_compute_kundli_invalid_place() -> None:
     """Test kundli computation with invalid place format."""
     birth_data = {
         "date_of_birth": date(1990, 5, 15),
@@ -234,7 +235,7 @@ def test_compute_kundli_invalid_place():
         astrology_service.compute_kundli(birth_data)
 
 
-def test_compute_kundli_missing_coordinates():
+def test_compute_kundli_missing_coordinates() -> None:
     """Test kundli computation with missing coordinates."""
     birth_data = {
         "date_of_birth": date(1990, 5, 15),

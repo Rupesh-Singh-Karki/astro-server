@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.model import User, UserDetails
+from src.auth.model import User, UserDetails, GenderEnum, MaritalStatusEnum
 from src.auth.schema import UserRead, TokenResponse
 from src.auth.services.otp_service import otp_service
 from src.auth.services.email_service import email_service
@@ -231,9 +231,9 @@ class AuthService:
         if full_name is not None:
             user_details.full_name = full_name
         if gender is not None:
-            user_details.gender = gender
+            user_details.gender = GenderEnum(gender)
         if marital_status is not None:
-            user_details.marital_status = marital_status
+            user_details.marital_status = MaritalStatusEnum(marital_status)
         if date_of_birth is not None:
             user_details.date_of_birth = date_of_birth
         if time_of_birth is not None:

@@ -192,6 +192,60 @@ class AuthService:
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def update_user_details(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        full_name: Optional[str] = None,
+        gender: Optional[str] = None,
+        marital_status: Optional[str] = None,
+        date_of_birth: Optional[date] = None,
+        time_of_birth: Optional[time] = None,
+        place_of_birth: Optional[str] = None,
+        timezone: Optional[str] = None,
+    ) -> Optional[UserDetails]:
+        """
+        Update user details for a user.
+
+        Args:
+            db: Database session
+            user_id: User's ID
+            full_name: Full name (optional)
+            gender: Gender (optional)
+            marital_status: Marital status (optional)
+            date_of_birth: Date of birth (optional)
+            time_of_birth: Time of birth (optional)
+            place_of_birth: Place of birth (optional)
+            timezone: Timezone (optional)
+
+        Returns:
+            Updated UserDetails object or None if not found
+        """
+        user_details = await self.get_user_details(db, user_id)
+        if not user_details:
+            return None
+
+        # Update only provided fields
+        if full_name is not None:
+            user_details.full_name = full_name
+        if gender is not None:
+            user_details.gender = gender
+        if marital_status is not None:
+            user_details.marital_status = marital_status
+        if date_of_birth is not None:
+            user_details.date_of_birth = date_of_birth
+        if time_of_birth is not None:
+            user_details.time_of_birth = time_of_birth
+        if place_of_birth is not None:
+            user_details.place_of_birth = place_of_birth
+        if timezone is not None:
+            user_details.timezone = timezone
+
+        await db.commit()
+        await db.refresh(user_details)
+        log.info(f"Updated user details for user_id: {user_id}")
+        return user_details
+
 
 # Singleton instance
 auth_service = AuthService()

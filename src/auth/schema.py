@@ -72,6 +72,20 @@ class UserDetailsRegister(UserDetailsBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserDetailsUpdate(BaseModel):
+    """Schema for updating UserDetails (all fields optional)."""
+
+    full_name: Optional[str] = None
+    gender: Optional[GenderEnum] = None
+    marital_status: Optional[MaritalStatusEnum] = None
+    date_of_birth: Optional[date] = None
+    time_of_birth: Optional[time] = None
+    place_of_birth: Optional[str] = None
+    timezone: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserDetailsRead(UserDetailsBase):
     """Schema for reading UserDetails."""
 

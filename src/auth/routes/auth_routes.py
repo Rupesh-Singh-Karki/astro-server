@@ -10,6 +10,7 @@ from src.auth.schema import (
     TokenResponse,
     UserRead,
     UserDetailsRegister,
+    UserDetailsUpdate,
     UserDetailsRead,
 )
 from src.auth.services.auth_service import auth_service
@@ -233,3 +234,61 @@ async def get_user_details(
         )
 
     return UserDetailsRead.model_validate(user_details)
+
+
+@router.put(
+    "/user-details",
+    response_model=UserDetailsRead,
+    status_code=status.HTTP_200_OK,
+    summary="Update user details",
+    description="Update detailed information for the authenticated user.",
+)
+async def update_user_details(
+    user_details_update: UserDetailsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserDetailsRead:
+    """
+    Update user details for the authenticated user.
+
+    All fields are optional - only provided fields will be updated.
+
+    - **full_name**: Full name (optional)
+    - **gender**: Gender (male/female/other) (optional)
+    - **marital_status**: Marital status (single/married) (optional)
+    - **date_of_birth**: Date of birth (optional)
+    - **time_of_birth**: Time of birth (optional)
+    - **place_of_birth**: Place of birth (optional)
+    - **timezone**: Timezone (optional)
+
+    Requires valid JWT token in Authorization header.
+    """
+    # Check if user details exist
+    existing_details = await auth_service.get_user_details(db, current_user.id)
+    if not existing_details:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User details not found. Please register your details first using POST /auth/register-details.",
+        )
+
+    # Update user details
+    updated_details = await auth_service.update_user_details(
+        db=db,
+        user_id=current_user.id,
+        full_name=user_details_update.full_name,
+        gender=user_details_update.gender,
+        marital_status=user_details_update.marital_status,
+        date_of_birth=user_details_update.date_of_birth,
+        time_of_birth=user_details_update.time_of_birth,
+        place_of_birth=user_details_update.place_of_birth,
+        timezone=user_details_update.timezone,
+    )
+
+    if not updated_details:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user details.",
+        )
+
+    log.info(f"User details updated for user: {current_user.email}")
+    return UserDetailsRead.model_validate(updated_details)

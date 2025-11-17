@@ -2,9 +2,34 @@
 
 Complete reference for all available API endpoints in the astro-server application.
 
-**Base URL:** `http://localhost:8000`
+**Base URL:** `http://localhost:8000` (Development) | `https://your-domain.com` (Production)
 
 **Version:** 1.0.0
+
+**Architecture:** RESTful API with JWT authentication
+
+---
+
+## Quick Integration Guide
+
+### Authentication Flow
+1. Send OTP → `POST /auth/send-otp`
+2. Verify OTP → `POST /auth/verify-otp` (returns token + `has_profile` flag)
+3. If `has_profile: false` → Register details → `POST /auth/register-details`
+4. If `has_profile: true` → Access chat features
+
+### Authorization Header
+All authenticated endpoints require:
+```
+Authorization: Bearer <access_token>
+```
+
+### Response Format
+- **Success:** JSON object with requested data
+- **Error:** `{"detail": "Error message"}`
+
+### Content Type
+All requests/responses use `application/json`
 
 ---
 
@@ -351,6 +376,87 @@ Authorization: Bearer <access_token>
 ```bash
 curl -X GET http://localhost:8000/auth/user-details \
   -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+### PUT `/auth/user-details`
+
+Update detailed information for the authenticated user. All fields are optional - only provided fields will be updated.
+
+**Authentication:** Required (Bearer token)
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+**Request Body (all fields optional):**
+```json
+{
+  "full_name": "Jane Doe",
+  "gender": "female",
+  "marital_status": "married",
+  "date_of_birth": "1990-05-15",
+  "time_of_birth": "15:45:00",
+  "place_of_birth": "New Delhi, India",
+  "timezone": "Asia/Kolkata"
+}
+```
+
+**Field Specifications:**
+- `full_name` (string, optional): User's full name
+- `gender` (enum, optional): **"male"**, **"female"**, or **"other"**
+- `marital_status` (enum, optional): **"single"** or **"married"**
+- `date_of_birth` (date, optional): Format **"YYYY-MM-DD"**
+- `time_of_birth` (time, optional): Format **"HH:MM:SS"** (24-hour format)
+- `place_of_birth` (string, optional): Birth location (city, state, country)
+- `timezone` (string, optional): Timezone identifier (e.g., "Asia/Kolkata", "America/New_York")
+
+**Note:** You can update one or more fields. Fields not included in the request will remain unchanged.
+
+**Response:** `200 OK`
+```json
+{
+  "id": "660e8400-e29b-41d4-a716-446655440001",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "full_name": "Jane Doe",
+  "gender": "female",
+  "marital_status": "married",
+  "date_of_birth": "1990-05-15",
+  "time_of_birth": "15:45:00",
+  "place_of_birth": "New Delhi, India",
+  "timezone": "Asia/Kolkata",
+  "created_at": "2025-11-17T10:35:00Z",
+  "updated_at": "2025-11-17T14:20:00Z"
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized` - Invalid or expired token
+- `404 Not Found` - User details not found (must register details first via POST endpoint)
+
+**Example (Update only full name and marital status):**
+```bash
+curl -X PUT http://localhost:8000/auth/user-details \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "full_name": "Jane Doe",
+    "marital_status": "married"
+  }'
+```
+
+**Example (Update birth location and timezone):**
+```bash
+curl -X PUT http://localhost:8000/auth/user-details \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "place_of_birth": "London, United Kingdom",
+    "timezone": "Europe/London"
+  }'
 ```
 
 ---

@@ -16,6 +16,9 @@ from src.chat.model import ChatSession, ChatMessage  # noqa: F401
 # Import auth router
 from src.auth.routes.auth_routes import router as auth_router
 
+# Import chat astrology router
+from src.chat.routes.astrology_routes import router as astrology_router
+
 description = """
 astro-server API's
 """
@@ -112,6 +115,8 @@ async def process_time_log_middleware(
 
 # Include auth router
 app.include_router(auth_router)
+# Include astrology/chat router
+app.include_router(astrology_router)
 
 if __name__ == "__main__":
     # When running locally, pass the app object directly to uvicorn.run

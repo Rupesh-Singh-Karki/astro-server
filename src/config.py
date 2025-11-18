@@ -1,8 +1,13 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
 ENV_PATH = BASE_DIR.parent / ".env"
+
+# Load .env file into os.environ so that all variables are available
+# This is needed for variables like GEMINI_API_KEY that aren't in Settings
+load_dotenv(ENV_PATH)
 
 
 class Settings(BaseSettings):
@@ -31,5 +36,8 @@ class Settings(BaseSettings):
     otp_expire_minutes: int = 10
     otp_max_attempts: int = 5
 
+    # Backend URL for keep-alive pings
+    base_url: str = "http://localhost:8000"
 
-settings = Settings()
+
+settings = Settings()  # type: ignore[call-arg]

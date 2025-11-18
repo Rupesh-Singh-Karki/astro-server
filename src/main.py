@@ -8,6 +8,7 @@ from src.config import settings
 from src.utils.db import init_models, async_session, async_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.utils.logger import logger
+from src.utils.scheduler import scheduler
 
 # Import all models to ensure relationships are properly registered
 from src.auth.model import User, UserDetails, OTPCode  # noqa: F401
@@ -55,11 +56,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         log.exception("Failed to create default admin, continuing startup")
 
+    # Start background scheduler for keep-alive pings
+    await scheduler.start()
+
     log.info("Startup complete.")
 
     yield
 
     log.info("Shutting down astro-server API...")
+    # Stop background scheduler
+    await scheduler.stop()
     # Properly dispose the underlying engine when shutting down
     try:
         await async_engine.dispose()
@@ -90,6 +96,12 @@ app.add_middleware(
 @app.get("/", tags=["Health"])
 async def health_check() -> Dict[str, str]:
     return {"status": "ok", "message": "astro-server API is running"}
+
+
+@app.get("/health", tags=["Health"])
+async def health() -> Dict[str, str]:
+    """Health check endpoint for keep-alive pings."""
+    return {"status": "healthy"}
 
 
 F = TypeVar("F", bound=Callable[..., Any])

@@ -42,10 +42,11 @@ class ChatService:
     async def get_user_sessions(
         self, db: AsyncSession, user_id: UUID, limit: int = 50
     ) -> List[ChatSession]:
-        """Get all chat sessions for a user."""
+        """Get all chat sessions for a user with message count."""
         stmt = (
             select(ChatSession)
             .where(ChatSession.user_id == user_id)
+            .options(selectinload(ChatSession.chat_messages))
             .order_by(desc(ChatSession.created_at))
             .limit(limit)
         )

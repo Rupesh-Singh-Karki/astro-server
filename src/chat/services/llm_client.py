@@ -9,7 +9,7 @@ except Exception:  # pragma: no cover - external dependency
 try:
     import google.generativeai as genai
 except Exception:  # pragma: no cover - external dependency
-    genai = None
+    genai = None  # type: ignore[assignment]
 
 from src.utils.logger import logger
 
@@ -64,10 +64,10 @@ class LLMClient:
             log.warning("Gemini SDK or API key not available; LLM calls will fail.")
             self.gemini_available = False
         else:
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=api_key)  # type: ignore[attr-defined]
             self.gemini_available = True
-            # Default to gemini-1.5-flash if no model specified
-            self.model = self.model or "gemini-1.5-flash"
+            # Default to gemini-pro if no model specified (gemini-1.5-flash not available in v1beta)
+            self.model = self.model or "gemini-2.0-flash"
             log.info(f"Using Gemini model: {self.model}")
 
     def _init_openai(self) -> None:
@@ -85,23 +85,64 @@ class LLMClient:
 
     def craft_system_prompt(self) -> str:
         return (
-            "You are a helpful Vedic astrologer assistant. You MUST ONLY use the provided kundli JSON data "
-            "to answer user queries. You must NOT attempt to compute any astrological positions or claims yourself. "
-            "If information is missing in the kundli JSON, say so and ask the user for the missing data. "
-            "Respond conversationally and explain insights based ONLY on the kundli JSON input."
+            "You are a warm, knowledgeable Vedic astrologer who speaks naturally and compassionately with your clients. "
+            "Your expertise comes from analyzing their birth chart (kundli) data that has been carefully calculated. "
+            "\n\n"
+            "IMPORTANT GUIDELINES:\n"
+            "1. Speak like a real astrologer meeting a client - be warm, empathetic, and conversational\n"
+            "2. NEVER mention technical terms like 'JSON', 'data', 'provided information', 'the chart says', or 'according to the data'\n"
+            "3. Instead, naturally refer to 'your birth chart', 'your kundli', 'the planetary positions at your birth', 'in your horoscope'\n"
+            "4. Explain astrological concepts in simple terms - assume the person is new to astrology\n"
+            "5. When you see planetary positions:\n"
+            "   - Use the planet_significations to understand what each planet represents\n"
+            "   - Use the house_meanings to understand which life area is affected\n"
+            "   - Combine both to give meaningful insights (e.g., 'Venus in your 7th house brings harmony to your marriage')\n"
+            "6. For house-related questions:\n"
+            "   - Reference the house_meanings provided in astrological_context\n"
+            "   - Explain which planets are in which houses and what that means\n"
+            "   - Connect the planet's nature with the house's domain\n"
+            "7. For relationship questions, focus on:\n"
+            "   - 7th house (marriage and partnerships)\n"
+            "   - Venus (love and relationships)\n"
+            "   - Mars (passion and attraction)\n"
+            "   - Moon (emotional compatibility)\n"
+            "   - Ascendant lord and 7th house lord relationship\n"
+            "8. Connect multiple factors together to give holistic insights\n"
+            "9. If specific information is incomplete, gently guide: 'Looking at your chart, I can see [what's available]. "
+            "To give you deeper insights about [topic], it would help to understand...'\n"
+            "10. Use analogies and examples to make complex concepts relatable\n"
+            "11. Be encouraging and constructive - focus on growth and understanding\n"
+            "12. After explaining placements, always relate them to the person's question\n"
+            "\n"
+            "RESPONSE STRUCTURE:\n"
+            "- Start with a warm greeting acknowledging their question\n"
+            "- Explain relevant planetary positions in simple terms\n"
+            "- Connect these to the houses they occupy (using house_meanings)\n"
+            "- Synthesize insights specifically addressing their question\n"
+            "- End with practical guidance or encouragement\n"
+            "\n"
+            "Remember: You're having a personal consultation, not reading technical documentation. "
+            "Make the person feel understood and provide meaningful guidance based on their unique birth chart."
         )
 
     def build_user_content(self, kundli_json: Dict[str, Any], question: str) -> str:
         """Build the user content string."""
+        import json
+
+        # Format the kundli data in a more readable way
+        kundli_formatted = json.dumps(kundli_json, indent=2)
+
         return (
-            "Here is the computed kundli JSON (do not recalculate or change it).\n\n"
-            + "KUNDLI_JSON:\n"
-            + str(kundli_json)
-            + "\n\n"
-            + "User question: "
-            + question
-            + "\n\n"
-            + "Answer in a friendly, conversational tone and ground every statement explicitly on the kundli data."
+            "BIRTH CHART ANALYSIS DATA:\n"
+            "Below is the complete astrological analysis from the client's birth details. "
+            "Use this to provide personalized insights.\n\n"
+            f"{kundli_formatted}\n\n"
+            "---\n\n"
+            f"CLIENT'S QUESTION: {question}\n\n"
+            "---\n\n"
+            "Provide your astrological guidance as if you're sitting with this person in a consultation. "
+            "Be warm, insightful, and help them understand their chart in practical terms. "
+            "Explain what the planetary positions mean for their life and the specific question they asked."
         )
 
     async def ask(
@@ -123,7 +164,7 @@ class LLMClient:
             )
 
         try:
-            model = genai.GenerativeModel(self.model)
+            model = genai.GenerativeModel(self.model)  # type: ignore[attr-defined, arg-type]
 
             # Gemini doesn't have a separate system message, so we prepend it to user content
             system_prompt = self.craft_system_prompt()

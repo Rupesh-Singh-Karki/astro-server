@@ -97,6 +97,33 @@ class AstrologyService:
                 "houses": self._extract_houses(chart_data),
                 "ascendant": self._extract_ascendant(chart_data),
                 "dashas": self._extract_dashas(chart_data),
+                "astrological_context": {
+                    "house_meanings": {
+                        "1st_house": "Self, personality, physical appearance, health, overall life direction",
+                        "2nd_house": "Wealth, family, speech, food, values, material possessions",
+                        "3rd_house": "Courage, siblings, short journeys, communication, skills, efforts",
+                        "4th_house": "Mother, home, emotions, education, vehicles, inner peace, property",
+                        "5th_house": "Children, creativity, intelligence, romance, speculation, past karma",
+                        "6th_house": "Enemies, diseases, debts, obstacles, service, daily work, competition",
+                        "7th_house": "Marriage, partnerships, spouse, business partners, public relationships",
+                        "8th_house": "Longevity, transformation, inheritance, occult, sudden events, mysteries",
+                        "9th_house": "Fortune, father, religion, philosophy, higher learning, long journeys, dharma",
+                        "10th_house": "Career, profession, fame, reputation, social status, authority, karma",
+                        "11th_house": "Gains, income, friends, elder siblings, aspirations, fulfillment of desires",
+                        "12th_house": "Loss, expenses, spirituality, foreign lands, isolation, liberation, bed pleasures",
+                    },
+                    "planet_significations": {
+                        "Sun": "Soul, father, government, authority, vitality, ego, confidence",
+                        "Moon": "Mind, mother, emotions, nurturing, intuition, mental peace",
+                        "Mars": "Energy, courage, siblings, property, aggression, determination",
+                        "Mercury": "Intelligence, communication, business, learning, analytical ability",
+                        "Jupiter": "Wisdom, children, teacher, expansion, fortune, spirituality",
+                        "Venus": "Love, beauty, luxury, arts, spouse, pleasure, material comforts",
+                        "Saturn": "Discipline, delays, karma, hard work, responsibility, longevity",
+                        "Rahu": "Desires, illusion, foreign elements, sudden gains, materialism",
+                        "Ketu": "Spirituality, detachment, past life karma, liberation, losses",
+                    },
+                },
                 "metadata": {
                     "ayanamsha": "Lahiri",
                     "generated_at": datetime.utcnow().isoformat(),
@@ -111,17 +138,35 @@ class AstrologyService:
             raise
 
     def _compute_with_jyotishyamitra(self, birth_data: Dict[str, Any]) -> Any:
-        """Fallback method to compute chart with jyotishyamitra."""
+        """Compute chart with jyotishyamitra using the correct API."""
         try:
-            # Try different possible APIs
-            if hasattr(jm, "calculate_horoscope"):
-                return jm.calculate_horoscope(birth_data)
-            elif hasattr(jm, "get_horoscope"):
-                return jm.get_horoscope(birth_data)
-            else:
-                # Return birth data wrapped in a dict for processing
-                log.warning("Could not find standard API, returning raw birth data")
-                return {"birth_data": birth_data, "raw": True}
+            # jyotishyamitra parameter order: name, gender, place, lon, lat, timezone, year, month, day, hour, min, sec
+            log.info(
+                f"Computing kundli for birth date {birth_data['year']}-{birth_data['month']}-{birth_data['day']}"
+            )
+
+            # Input birth data (note the parameter order!)
+            birthdata = jm.input_birthdata(
+                name="User",
+                gender="Male",  # Default, can be made dynamic
+                place="Birth Location",
+                longitude=str(birth_data["longitude"]),
+                lattitude=str(birth_data["latitude"]),
+                timezone=birth_data.get("timezone", "UTC"),
+                year=str(birth_data["year"]),
+                month=str(birth_data["month"]),
+                day=str(birth_data["day"]),
+                hour=str(birth_data["hour"]),
+                min=str(birth_data["minute"]),
+                sec=str(birth_data["second"]),
+            )
+
+            # Generate astrological data
+            jm.generate_astrologicalData(birthdata)
+
+            # Return the jm module which now contains computed data
+            return jm
+
         except Exception as e:
             log.error(f"Error computing with jyotishyamitra: {e}")
             raise
@@ -129,20 +174,11 @@ class AstrologyService:
     def _extract_planetary_positions(self, chart_data: Any) -> Dict[str, Any]:
         """Extract planetary positions from chart data."""
         try:
-            if isinstance(chart_data, dict):
-                # Look for common keys in chart data
-                if "planets" in chart_data:
-                    return chart_data["planets"]
-                elif "planetary_positions" in chart_data:
-                    return chart_data["planetary_positions"]
-                elif "grahas" in chart_data:
-                    return chart_data["grahas"]
-
-            # If chart_data is an object, try to access attributes
-            if hasattr(chart_data, "planets"):
-                return self._serialize_planets(chart_data.planets)
-            elif hasattr(chart_data, "get_planets"):
-                return self._serialize_planets(chart_data.get_planets())
+            # jyotishyamitra stores data in chart_data.data.D1 dictionary
+            if hasattr(chart_data, "data") and hasattr(chart_data.data, "D1"):
+                d1_chart = chart_data.data.D1
+                if isinstance(d1_chart, dict) and "planets" in d1_chart:
+                    return self._make_serializable(d1_chart["planets"])
 
             return {}
         except Exception as e:
@@ -152,16 +188,13 @@ class AstrologyService:
     def _extract_houses(self, chart_data: Any) -> Dict[str, Any]:
         """Extract house information from chart data."""
         try:
-            if isinstance(chart_data, dict):
-                if "houses" in chart_data:
-                    return chart_data["houses"]
-                elif "bhavas" in chart_data:
-                    return chart_data["bhavas"]
-
-            if hasattr(chart_data, "houses"):
-                return self._serialize_houses(chart_data.houses)
-            elif hasattr(chart_data, "get_houses"):
-                return self._serialize_houses(chart_data.get_houses())
+            # jyotishyamitra stores house data in D1 chart
+            if hasattr(chart_data, "data") and hasattr(chart_data.data, "D1"):
+                d1_chart = chart_data.data.D1
+                if isinstance(d1_chart, dict) and "houses" in d1_chart:
+                    # Return houses directly without extra nesting
+                    houses_data = self._make_serializable(d1_chart["houses"])
+                    return houses_data if isinstance(houses_data, dict) else {}
 
             return {}
         except Exception as e:
@@ -171,17 +204,11 @@ class AstrologyService:
     def _extract_ascendant(self, chart_data: Any) -> Dict[str, Any]:
         """Extract ascendant (lagna) information."""
         try:
-            if isinstance(chart_data, dict):
-                if "ascendant" in chart_data:
-                    return chart_data["ascendant"]
-                elif "lagna" in chart_data:
-                    return chart_data["lagna"]
-
-            if hasattr(chart_data, "ascendant"):
-                asc = chart_data.ascendant
-                return self._serialize_point(asc)
-            elif hasattr(chart_data, "get_ascendant"):
-                return self._serialize_point(chart_data.get_ascendant())
+            # jyotishyamitra stores ascendant in D1 chart
+            if hasattr(chart_data, "data") and hasattr(chart_data.data, "D1"):
+                d1_chart = chart_data.data.D1
+                if isinstance(d1_chart, dict) and "ascendant" in d1_chart:
+                    return self._make_serializable(d1_chart["ascendant"])
 
             return {}
         except Exception as e:
@@ -191,21 +218,62 @@ class AstrologyService:
     def _extract_dashas(self, chart_data: Any) -> Dict[str, Any]:
         """Extract dasha information."""
         try:
-            if isinstance(chart_data, dict):
-                if "dashas" in chart_data:
-                    return chart_data["dashas"]
-                elif "vimshottari" in chart_data:
-                    return chart_data["vimshottari"]
-
+            # jyotishyamitra has a dashas module
             if hasattr(chart_data, "dashas"):
-                return self._serialize_dashas(chart_data.dashas)
-            elif hasattr(chart_data, "get_dashas"):
-                return self._serialize_dashas(chart_data.get_dashas())
+                dashas_data = chart_data.dashas
+                result = {}
+
+                # Only extract simple types - avoid module objects
+                for attr in dir(dashas_data):
+                    if not attr.startswith("_") and attr not in [
+                        "__loader__",
+                        "__spec__",
+                    ]:
+                        val = getattr(dashas_data, attr, None)
+                        # Only include serializable types
+                        if val is not None and not callable(val):
+                            # Check if it's a basic type or dict
+                            if isinstance(
+                                val, (str, int, float, bool, dict, list, tuple)
+                            ):
+                                result[attr] = self._make_serializable(val)
+                            elif hasattr(val, "__dict__"):
+                                # Try to convert to dict, but skip if it's a module/class
+                                if (
+                                    not isinstance(val, type)
+                                    and type(val).__module__ != "builtins"
+                                ):
+                                    try:
+                                        result[attr] = self._make_serializable(
+                                            val.__dict__
+                                        )
+                                    except (AttributeError, TypeError):
+                                        pass
+
+                return result if result else {}
 
             return {}
         except Exception as e:
             log.warning(f"Error extracting dashas: {e}")
             return {}
+
+    def _make_serializable(self, obj: Any) -> Any:
+        """Recursively convert objects to JSON-serializable format."""
+        from datetime import datetime, date, time
+
+        if isinstance(obj, (datetime, date, time)):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {k: self._make_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [self._make_serializable(item) for item in obj]
+        elif isinstance(obj, (str, int, float, bool, type(None))):
+            return obj
+        elif hasattr(obj, "__dict__"):
+            return self._make_serializable(obj.__dict__)
+        else:
+            # For any other type, try to convert to string
+            return str(obj)
 
     def _serialize_planets(self, planets: Any) -> Dict[str, Any]:
         """Convert planet objects to dict."""

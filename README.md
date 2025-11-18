@@ -8,6 +8,9 @@ A production-ready FastAPI backend with email OTP authentication, user managemen
 - ✅ **JWT Token Management** - Stateless authentication with HS512
 - ✅ **User Management** - User profiles with astrological details
 - ✅ **Chat System** - Multi-session chat with AI integration ready
+- ✅ **Vedic Astrology** - Kundli computation with Jyotishyamitra
+- ✅ **AI Astrologer** - Natural language astrology consultations
+- ✅ **Keep-Alive Service** - Automatic background pings (14-minute intervals)
 - ✅ **SQLAlchemy 2.0** - Modern async ORM with proper typing
 - ✅ **Pydantic V2** - Fast data validation and serialization
 - ✅ **PostgreSQL** - Reliable async database with connection pooling
@@ -33,7 +36,20 @@ pip install -e .
 cp .env.example .env
 
 # Edit .env with your settings
-# Required: DB_URI, JWT_SECRET_KEY, SMTP credentials
+# Required: DB_URI, JWT_SECRET_KEY, SMTP credentials, LLM API key
+```
+
+**Important:** For chat/astrology features to work, you **must** configure at least one LLM provider:
+- **Gemini** (Recommended): Get API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+- **OpenAI**: Get API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+
+Add to your `.env` file:
+```bash
+# Option 1: Use Gemini (free tier available)
+GEMINI_API_KEY=your-gemini-api-key-here
+
+# Option 2: Use OpenAI
+# OPENAI_API_KEY=your-openai-api-key-here
 ```
 
 ### 3. Initialize Database
@@ -167,6 +183,9 @@ SMTP_FROM_EMAIL=your-email@gmail.com
 ROOT_PATH=
 LOGGING_LEVEL=INFO
 
+# Backend URL (for keep-alive pings)
+BASE_URL=http://localhost:8000  # Change to your production URL
+
 # JWT
 JWT_ALGORITHM=HS512
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=720
@@ -290,6 +309,7 @@ docker-compose down
 ### Production Checklist
 
 - [ ] Set strong JWT_SECRET_KEY
+- [ ] Configure BASE_URL for keep-alive service
 - [ ] Use HTTPS/TLS
 - [ ] Configure CORS properly
 - [ ] Use production email service
@@ -299,6 +319,24 @@ docker-compose down
 - [ ] Set up logging aggregation
 - [ ] Implement token refresh
 - [ ] Add audit logging
+
+## Background Services
+
+### Keep-Alive Service
+
+The application includes an automatic keep-alive service that pings the `/health` endpoint every 14 minutes. This is useful for:
+
+- **Free-tier hosting**: Prevents apps from sleeping on platforms like Render, Railway, etc.
+- **Health monitoring**: Regular health checks ensure the app is responsive
+- **Automatic restart**: Helps detect and recover from failures
+
+**Configuration:**
+```bash
+# Set your production URL in .env
+BASE_URL=https://your-app.onrender.com
+```
+
+The service starts automatically when the application launches and stops gracefully on shutdown. Logs are available to monitor ping status.
 
 ## Troubleshooting
 

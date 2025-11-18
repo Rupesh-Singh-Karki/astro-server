@@ -28,7 +28,8 @@ COPY . .
 # Activate virtual environment and set PYTHONPATH
 ENV PATH="/src/.venv/bin:$PATH"
 ENV PYTHONPATH="/src"
-ENV PORT=8000
+# Default port, but Render will override with PORT env var
+ENV PORT=10000
 
 # Use ENTRYPOINT to run gunicorn with multi worker for production
 ENTRYPOINT ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-c", "gunicorn_conf.py", "src.main:app"]

@@ -60,4 +60,7 @@ jobs:
         env:
           DB_URI: "sqlite+aiosqlite:///:memory:"
           JWT_SECRET_KEY: "testsecret"
+          SMTP_USERNAME: "test@example.com"
+          SMTP_PASSWORD: "testpassword"
+          SMTP_FROM_EMAIL: "test@example.com"
         run: uv run python -m pytest -q

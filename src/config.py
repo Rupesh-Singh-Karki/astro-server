@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     otp_expire_minutes: int = 10
     otp_max_attempts: int = 5
 
+    # Server Configuration
+    port: int = 10000
+
     # Backend URL for keep-alive pings
     base_url: str = "http://localhost:8000"
 

@@ -46,7 +46,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     - disposes the async engine at shutdown
     """
     log.info("Starting astro-server API...")
-    await init_models()
+
+    # Validate critical environment variables
+    try:
+        from src.config import settings
+
+        if not settings.db_uri:
+            log.error("CRITICAL: DB_URI not set in environment variables!")
+            raise ValueError("DB_URI is required")
+        if not settings.jwt_secret_key:
+            log.error("CRITICAL: JWT_SECRET_KEY not set in environment variables!")
+            raise ValueError("JWT_SECRET_KEY is required")
+        log.info(f"Database: {settings.db_uri.split('@')[0]}@***")  # Hide credentials
+        log.info(f"Port: {settings.port}")
+    except Exception as e:
+        log.exception(f"Failed to load configuration: {e}")
+        raise
+
+    try:
+        await init_models()
+    except Exception as e:
+        log.exception(f"Failed to initialize database models: {e}")
+        raise
+
     # create_default_admin_if_missing is optional; implement as a no-op if not available
     try:
         async with async_session() as session:
@@ -57,9 +79,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         log.exception("Failed to create default admin, continuing startup")
 
     # Start background scheduler for keep-alive pings
-    await scheduler.start()
+    try:
+        await scheduler.start()
+        log.info("Background scheduler started successfully")
+    except Exception as e:
+        log.exception(f"Failed to start scheduler: {e}")
+        # Continue anyway - scheduler is not critical
 
-    log.info("Startup complete.")
+    log.info("Startup complete. Application ready to accept requests.")
 
     yield
 

@@ -14,8 +14,10 @@ if max_workers_str:
 
 web_concurrency_str = os.getenv("WEB_CONCURRENCY", None)
 host = os.getenv("HOST", "0.0.0.0")
-port = os.getenv("PORT", "8000")
-bind_env = os.getenv("BIND", None)
+port = os.getenv("PORT")  # Render provides this
+if not port:
+    port = "10000"  # fallback for local dev
+use_bind = f"0.0.0.0:{port}"
 use_loglevel = os.getenv("LOG_LEVEL", "info")
 
 # Configure Gunicorn logger with colored output

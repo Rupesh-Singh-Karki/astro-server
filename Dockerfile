@@ -32,4 +32,4 @@ ENV PYTHONPATH="/src"
 ENV PORT=10000
 
 # Use ENTRYPOINT to run gunicorn with multi worker for production
-ENTRYPOINT ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-c", "gunicorn_conf.py", "src.main:app"]
+ENTRYPOINT ["sh", "-c", "gunicorn -c gunicorn_conf.py src.main:app"]

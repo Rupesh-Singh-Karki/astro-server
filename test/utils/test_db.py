@@ -67,7 +67,7 @@ def test_get_sync_engine() -> None:
         mock_create_engine.return_value = mock_engine
 
         engine = get_sync_engine()
-        assert engine == mock_engine  # type: ignore[comparison-overlap]
+        assert engine == mock_engine
         mock_create_engine.assert_called_once()
         args = mock_create_engine.call_args[0]
         assert "postgresql://" in args[0]  # Should convert back

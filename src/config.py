@@ -12,7 +12,7 @@ load_dotenv(ENV_PATH)
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=ENV_PATH, env_file_encoding="utf-8", extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     db_uri: str
@@ -40,4 +40,4 @@ class Settings(BaseSettings):
     base_url: str = "http://localhost:8000"
 
 
-settings = Settings()  # type: ignore[call-arg]
+settings = Settings()

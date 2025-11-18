@@ -292,3 +292,34 @@ async def update_user_details(
 
     log.info(f"User details updated for user: {current_user.email}")
     return UserDetailsRead.model_validate(updated_details)
+
+
+@router.delete(
+    "/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete user account",
+    description="Permanently delete the authenticated user's account and all associated data.",
+)
+async def delete_user_account(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """
+    Delete the current user's account.
+
+    This will permanently delete:
+    - User account
+    - User details
+    - All chat sessions and messages (via cascade)
+    - All OTP codes
+
+    This action cannot be undone. Requires valid JWT token in Authorization header.
+    """
+    success = await auth_service.delete_user(db, current_user.id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user account.",
+        )
+
+    log.info(f"User account deleted: {current_user.email}")

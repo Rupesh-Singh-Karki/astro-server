@@ -9,7 +9,7 @@ except Exception:  # pragma: no cover - external dependency
 try:
     import google.generativeai as genai
 except Exception:  # pragma: no cover - external dependency
-    genai = None  # type: ignore[assignment]
+    genai = None
 
 from src.utils.logger import logger
 
@@ -64,7 +64,7 @@ class LLMClient:
             log.warning("Gemini SDK or API key not available; LLM calls will fail.")
             self.gemini_available = False
         else:
-            genai.configure(api_key=api_key)  # type: ignore[attr-defined]
+            genai.configure(api_key=api_key)
             self.gemini_available = True
             # Default to gemini-pro if no model specified (gemini-1.5-flash not available in v1beta)
             self.model = self.model or "gemini-2.0-flash"
@@ -164,7 +164,7 @@ class LLMClient:
             )
 
         try:
-            model = genai.GenerativeModel(self.model)  # type: ignore[attr-defined, arg-type]
+            model = genai.GenerativeModel(self.model)
 
             # Gemini doesn't have a separate system message, so we prepend it to user content
             system_prompt = self.craft_system_prompt()

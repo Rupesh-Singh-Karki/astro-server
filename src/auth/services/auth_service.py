@@ -248,6 +248,31 @@ class AuthService:
         log.info(f"Updated user details for user_id: {user_id}")
         return user_details
 
+    async def delete_user(self, db: AsyncSession, user_id: UUID) -> bool:
+        """
+        Delete a user account and all associated data.
+
+        This will cascade delete:
+        - User details
+        - Chat sessions and messages
+        - OTP codes
+
+        Args:
+            db: Database session
+            user_id: User's ID to delete
+
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        user = await self.get_user_by_id(db, user_id)
+        if not user:
+            return False
+
+        await db.delete(user)
+        await db.commit()
+        log.info(f"Deleted user account: {user_id}")
+        return True
+
 
 # Singleton instance
 auth_service = AuthService()

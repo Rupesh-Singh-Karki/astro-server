@@ -150,14 +150,29 @@ astro-server/
 | `/auth/send-otp` | POST | No | Send OTP to email |
 | `/auth/verify-otp` | POST | No | Verify OTP and get token |
 | `/auth/me` | GET | Yes | Get current user |
+| `/auth/me` | DELETE | Yes | Delete user account |
 | `/auth/verify-token` | GET | Yes | Verify token validity |
 | `/auth/logout` | POST | Yes | Logout user |
+| `/auth/register-details` | POST | Yes | Register user details |
+| `/auth/user-details` | GET | Yes | Get user details |
+| `/auth/user-details` | PUT | Yes | Update user details |
+
+### Chat & Astrology
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/chat/astrologer` | POST | Yes | Chat with AI astrologer |
+| `/chat/sessions` | GET | Yes | Get user's chat sessions |
+| `/chat/sessions/{session_id}` | GET | Yes | Get session with messages |
+| `/chat/sessions/{session_id}` | DELETE | Yes | Delete chat session |
+| `/chat/sessions/{session_id}/messages/{message_id}` | DELETE | Yes | Delete specific message |
 
 ### Health
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/` | GET | No | Health check |
+| `/health` | GET | No | Health check (for keep-alive) |
 
 ## Environment Variables
 

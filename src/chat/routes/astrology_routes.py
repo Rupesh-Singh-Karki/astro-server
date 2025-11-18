@@ -234,3 +234,80 @@ async def get_session_with_messages(
             for m in session.chat_messages
         ],
     )
+
+
+@router.delete(
+    "/sessions/{session_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete Chat Session",
+    description="Delete a chat session and all its messages",
+)
+async def delete_chat_session(
+    session_id: UUID,
+    current_user: User = Depends(get_current_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """
+    Delete a specific chat session and all its messages.
+
+    Args:
+        session_id: ID of the chat session to delete
+        current_user: Authenticated user
+        db: Database session
+
+    Raises:
+        HTTPException: If session not found or access denied
+    """
+    deleted = await chat_service.delete_session(db, session_id, current_user.id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or access denied",
+        )
+    log.info(f"User {current_user.id} deleted session {session_id}")
+
+
+@router.delete(
+    "/sessions/{session_id}/messages/{message_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete Chat Message",
+    description="Delete a specific message from a chat session",
+)
+async def delete_chat_message(
+    session_id: UUID,
+    message_id: UUID,
+    current_user: User = Depends(get_current_verified_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """
+    Delete a specific message from a chat session.
+
+    Args:
+        session_id: ID of the chat session
+        message_id: ID of the message to delete
+        current_user: Authenticated user
+        db: Database session
+
+    Raises:
+        HTTPException: If session/message not found or access denied
+    """
+    # Verify session belongs to user
+    session = await chat_service.get_session(db, session_id, current_user.id)
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found or access denied",
+        )
+
+    # Delete the message
+    deleted = await chat_service.delete_message(
+        db, message_id, session_id, current_user.id
+    )
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Message {message_id} not found in session {session_id}",
+        )
+    log.info(
+        f"User {current_user.id} deleted message {message_id} from session {session_id}"
+    )

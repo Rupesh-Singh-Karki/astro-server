@@ -25,7 +25,7 @@ class MaritalStatusEnum(str, PyEnum):
     MARRIED = "married"
 
 
-class User(SQLModel, table=True):
+class User(SQLModel, table=True):  # type: ignore[call-arg]
     """User model."""
 
     __tablename__ = "users"
@@ -53,7 +53,7 @@ class User(SQLModel, table=True):
     )
 
 
-class UserDetails(SQLModel, table=True):
+class UserDetails(SQLModel, table=True):  # type: ignore[call-arg]
     """User details model representing the user_details table."""
 
     __tablename__ = "user_details"
@@ -81,7 +81,7 @@ class UserDetails(SQLModel, table=True):
     user: Optional["User"] = Relationship(back_populates="user_details")
 
 
-class OTPCode(SQLModel, table=True):
+class OTPCode(SQLModel, table=True):  # type: ignore[call-arg]
     """OTP code model representing the otp_codes table."""
 
     __tablename__ = "otp_codes"

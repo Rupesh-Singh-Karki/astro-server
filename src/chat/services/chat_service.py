@@ -105,6 +105,30 @@ class ChatService:
         log.info(f"Updated title for session {session_id}")
         return session
 
+    async def delete_message(
+        self, db: AsyncSession, message_id: UUID, session_id: UUID, user_id: UUID
+    ) -> bool:
+        """Delete a specific message from a chat session."""
+        # First verify the session belongs to the user
+        session = await self.get_session(db, session_id, user_id)
+        if not session:
+            return False
+
+        # Get the message and verify it belongs to the session
+        result = await db.execute(
+            select(ChatMessage).where(
+                ChatMessage.id == message_id, ChatMessage.session_id == session_id
+            )
+        )
+        message = result.scalar_one_or_none()
+        if not message:
+            return False
+
+        await db.delete(message)
+        await db.commit()
+        log.info(f"Deleted message {message_id} from session {session_id}")
+        return True
+
     async def delete_session(
         self, db: AsyncSession, session_id: UUID, user_id: UUID
     ) -> bool:

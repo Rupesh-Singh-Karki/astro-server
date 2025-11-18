@@ -449,6 +449,7 @@ curl -X PUT http://localhost:8000/auth/user-details \
 ```
 
 **Example (Update birth location and timezone):**
+**Example (Update birth location and timezone):**
 ```bash
 curl -X PUT http://localhost:8000/auth/user-details \
   -H "Authorization: Bearer <access_token>" \
@@ -457,6 +458,82 @@ curl -X PUT http://localhost:8000/auth/user-details \
     "place_of_birth": "London, United Kingdom",
     "timezone": "Europe/London"
   }'
+```
+
+---
+
+### DELETE `/auth/me`
+
+Permanently delete the authenticated user's account and all associated data.
+
+**Authentication:** Required (Bearer token)
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:** `204 No Content`
+
+No response body is returned on successful deletion.
+
+**What gets deleted:**
+- User account
+- User details (profile information)
+- All chat sessions
+- All chat messages
+- All OTP codes
+
+**⚠️ Warning:** This action is permanent and cannot be undone. All user data will be permanently deleted from the system.
+
+**Error Responses:**
+- `401 Unauthorized` - Invalid or expired token
+- `500 Internal Server Error` - Failed to delete user account
+
+**Example:**
+```bash
+curl -X DELETE http://localhost:8000/auth/me \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## Chat & Astrology Endpoints
+
+---
+
+### DELETE `/auth/me`
+
+Permanently delete the authenticated user's account and all associated data.
+
+**Authentication:** Required (Bearer token)
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:** `204 No Content`
+
+No response body is returned on successful deletion.
+
+**What gets deleted:**
+- User account
+- User details (profile information)
+- All chat sessions
+- All chat messages
+- All OTP codes
+
+**⚠️ Warning:** This action is permanent and cannot be undone. All user data will be permanently deleted from the system.
+
+**Error Responses:**
+- `401 Unauthorized` - Invalid or expired token
+- `500 Internal Server Error` - Failed to delete user account
+
+**Example:**
+```bash
+curl -X DELETE http://localhost:8000/auth/me \
+  -H "Authorization: Bearer <access_token>"
 ```
 
 ---
@@ -722,12 +799,86 @@ curl -X GET http://localhost:8000/chat/sessions/550e8400-e29b-41d4-a716-44665544
 
 ---
 
+### DELETE `/chat/sessions/{session_id}`
+
+Permanently delete a chat session and all its messages.
+
+**Authentication:** Required (Bearer token + Verified email)
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Path Parameters:**
+- `session_id` (UUID): ID of the chat session to delete
+
+**Response:** `204 No Content`
+
+No response body is returned on successful deletion.
+
+**What gets deleted:**
+- The chat session
+- All messages in the session (cascade delete)
+
+**⚠️ Warning:** This action is permanent and cannot be undone.
+
+**Error Responses:**
+- `401 Unauthorized` - Invalid or expired token, or email not verified
+- `404 Not Found` - Session not found or access denied
+- `500 Internal Server Error` - Failed to delete session
+
+**Example:**
+```bash
+curl -X DELETE http://localhost:8000/chat/sessions/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+### DELETE `/chat/sessions/{session_id}/messages/{message_id}`
+
+Delete a specific message from a chat session.
+
+**Authentication:** Required (Bearer token + Verified email)
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Path Parameters:**
+- `session_id` (UUID): ID of the chat session
+- `message_id` (UUID): ID of the message to delete
+
+**Response:** `204 No Content`
+
+No response body is returned on successful deletion.
+
+**Security:**
+- Verifies the session belongs to the authenticated user
+- Verifies the message belongs to the specified session
+- Returns 404 if either verification fails
+
+**Error Responses:**
+- `401 Unauthorized` - Invalid or expired token, or email not verified
+- `404 Not Found` - Session/message not found, message not in session, or access denied
+
+**Example:**
+```bash
+curl -X DELETE http://localhost:8000/chat/sessions/550e8400-e29b-41d4-a716-446655440000/messages/msg-uuid-1 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
 ## Common Response Codes
 
 | Status Code | Description |
 |-------------|-------------|
 | `200 OK` | Request succeeded |
 | `201 Created` | Resource created successfully |
+| `204 No Content` | Request succeeded with no content returned (used for deletions) |
 | `400 Bad Request` | Invalid request data |
 | `401 Unauthorized` | Authentication required or token invalid |
 | `404 Not Found` | Resource not found |
@@ -831,5 +982,5 @@ These interfaces allow you to explore and test the API directly from your browse
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** November 17, 2025
+**Document Version:** 1.1  
+**Last Updated:** November 18, 2025

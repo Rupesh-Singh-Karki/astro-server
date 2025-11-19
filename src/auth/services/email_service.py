@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any, Dict
 
-import resend
+from mailersend import MailerSendClient, EmailBuilder
 
 from src.config import settings
 from src.utils.logger import logger
@@ -10,21 +10,22 @@ log = logger(__name__)
 
 
 class EmailService:
-    """Service for sending emails via Resend."""
+    """Service for sending emails via MailerSend."""
 
     def __init__(self) -> None:
         self.from_email = settings.smtp_from_email
         self.from_name = settings.smtp_from_name
 
-        # Configure Resend
-        if not settings.resend_api_key:
+        # Configure MailerSend
+        if not settings.mailersend_api_key:
             log.warning(
-                "RESEND_API_KEY not set - email sending will fail in production"
+                "MAILERSEND_API_KEY not set - email sending will fail in production"
             )
+            self.mailer = None
             return
 
-        resend.api_key = settings.resend_api_key
-        log.info("Email service initialized with Resend")
+        self.mailer = MailerSendClient(api_key=settings.mailersend_api_key)
+        log.info("Email service initialized with MailerSend")
 
     def _create_otp_email_html(self, otp: str, expires_in_minutes: int) -> str:
         """Create HTML content for OTP email."""
@@ -88,7 +89,7 @@ class EmailService:
         self, to_email: str, otp: str, expires_in_minutes: int
     ) -> bool:
         """
-        Send OTP email to the specified address using Resend.
+        Send OTP email to the specified address using MailerSend.
 
         Args:
             to_email: Recipient email address
@@ -98,8 +99,8 @@ class EmailService:
         Returns:
             True if email sent successfully, False otherwise
         """
-        if not settings.resend_api_key:
-            log.error("Cannot send email: RESEND_API_KEY not configured")
+        if not settings.mailersend_api_key or not self.mailer:
+            log.error("Cannot send email: MAILERSEND_API_KEY not configured")
             return False
 
         try:
@@ -107,31 +108,38 @@ class EmailService:
             text_content = self._create_otp_email_text(otp, expires_in_minutes)
 
             # Send email in thread pool to avoid blocking
-            def _send_resend() -> Dict[str, Any]:
-                params: Dict[str, Any] = {
-                    "from": f"{self.from_name} <{self.from_email}>",
-                    "to": [to_email],
-                    "subject": f"Your Verification Code - {self.from_name}",
-                    "html": html_content,
-                    "text": text_content,
+            def _send_mailersend() -> Dict[str, Any]:
+                email = (
+                    EmailBuilder()
+                    .from_email(self.from_email, self.from_name)
+                    .to(to_email)
+                    .subject(f"Your Verification Code - {self.from_name}")
+                    .html(html_content)
+                    .text(text_content)
+                    .build()
+                )
+
+                assert self.mailer is not None
+                response = self.mailer.emails.send(email)
+                return {
+                    "id": getattr(response, "message_id", "unknown"),
+                    "success": True,
                 }
-                result = resend.Emails.send(params)
-                return result
 
             result = await asyncio.wait_for(
-                asyncio.to_thread(_send_resend), timeout=10.0
+                asyncio.to_thread(_send_mailersend), timeout=10.0
             )
 
             log.info(
-                f"OTP email sent successfully via Resend to {to_email} (ID: {result.get('id', 'unknown')})"
+                f"OTP email sent successfully via MailerSend to {to_email} (ID: {result.get('id', 'unknown')})"
             )
             return True
 
         except asyncio.TimeoutError:
-            log.error("Resend email sending timed out after 10 seconds")
+            log.error("MailerSend email sending timed out after 10 seconds")
             return False
         except Exception as e:
-            log.error(f"Resend email error: {str(e)}")
+            log.error(f"MailerSend email error: {str(e)}")
             return False
 
 

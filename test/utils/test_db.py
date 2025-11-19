@@ -62,12 +62,16 @@ def test_get_sync_engine() -> None:
         patch("src.utils.db.create_engine") as mock_create_engine,
     ):
 
+        from unittest.mock import MagicMock
+
         mock_settings.db_uri = "postgresql+asyncpg://user:pass@localhost/db"
-        mock_engine = "mock_engine"
+        mock_engine = MagicMock()
         mock_create_engine.return_value = mock_engine
 
         engine = get_sync_engine()
         assert engine == mock_engine
         mock_create_engine.assert_called_once()
-        args = mock_create_engine.call_args[0]
-        assert "postgresql://" in args[0]  # Should convert back
+        call_args = mock_create_engine.call_args
+        if call_args and call_args[0]:
+            uri_arg = str(call_args[0][0])
+            assert "postgresql://" in uri_arg  # Should convert back

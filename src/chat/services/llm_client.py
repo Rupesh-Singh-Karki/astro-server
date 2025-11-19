@@ -9,7 +9,7 @@ except Exception:  # pragma: no cover - external dependency
 
 try:
     import google.generativeai as genai
-except Exception:  # pragma: no cover - external dependency
+except ImportError:
     genai = None
 
 from src.utils.logger import logger

@@ -4,7 +4,7 @@ Pytest configuration and fixtures for testing.
 
 import pytest
 import pytest_asyncio
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Generator
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     create_async_engine,
@@ -15,10 +15,23 @@ from sqlmodel import SQLModel
 
 from src.auth.model import User, UserDetails, OTPCode  # noqa: F401
 from src.chat.model import ChatSession, ChatMessage  # noqa: F401
+from src.config import settings
 
 
 # Test database URL (in-memory SQLite)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_bypass_mode() -> Generator[None, None, None]:
+    """Disable OTP bypass mode for all tests."""
+    # Store original value
+    original_bypass = settings.bypass_otp_validation
+    # Set to False for tests
+    settings.bypass_otp_validation = False
+    yield
+    # Restore original value after tests
+    settings.bypass_otp_validation = original_bypass
 
 
 @pytest.fixture(scope="session")

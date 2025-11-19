@@ -82,7 +82,7 @@ class UserDetails(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class OTPCode(SQLModel, table=True):  # type: ignore[call-arg]
-    """OTP code model representing the otp_codes table."""
+    """OTP codes for email verification."""
 
     __tablename__ = "otp_codes"
 

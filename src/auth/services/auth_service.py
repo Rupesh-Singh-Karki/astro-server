@@ -65,6 +65,14 @@ class AuthService:
             # Create OTP
             otp_record, plain_otp = await otp_service.create_otp(db, email)
 
+            # BYPASS MODE: Skip email sending for prototype/development
+            if settings.bypass_otp_validation:
+                log.warning(
+                    f"⚠️  BYPASS MODE ACTIVE: Skipping email send for {email}. "
+                    f"Generated OTP (for logging only): {plain_otp}"
+                )
+                return True, None, settings.otp_expire_minutes
+
             # Send OTP via email
             email_sent = await email_service.send_otp_email(
                 to_email=email,

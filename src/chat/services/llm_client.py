@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Dict, Literal
 import os
 
@@ -171,16 +172,26 @@ class LLMClient:
             user_content = self.build_user_content(kundli_json, question)
             full_prompt = f"{system_prompt}\n\n{user_content}"
 
-            response = model.generate_content(
-                full_prompt,
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=max_tokens,
-                    temperature=0.7,
-                ),
+            # Run blocking Gemini API call in thread pool with timeout
+            def _call_gemini() -> str:
+                response = model.generate_content(
+                    full_prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        max_output_tokens=max_tokens,
+                        temperature=0.7,
+                    ),
+                )
+                return response.text
+
+            # 60 second timeout for LLM response
+            result = await asyncio.wait_for(
+                asyncio.to_thread(_call_gemini), timeout=60.0
             )
+            return result
 
-            return response.text
-
+        except asyncio.TimeoutError:
+            log.error("Gemini API call timed out after 60 seconds")
+            raise RuntimeError("LLM response timed out. Please try again.")
         except Exception as e:  # pragma: no cover - external call
             log.error(f"Failed to get Gemini response: {e}")
             raise
@@ -203,15 +214,25 @@ class LLMClient:
                 },
             ]
 
-            resp = openai.ChatCompletion.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=0.7,
+            # Run blocking OpenAI API call in thread pool with timeout
+            def _call_openai() -> str:
+                resp = openai.ChatCompletion.create(
+                    model=self.model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=0.7,
+                )
+                return resp["choices"][0]["message"]["content"]
+
+            # 60 second timeout for LLM response
+            result = await asyncio.wait_for(
+                asyncio.to_thread(_call_openai), timeout=60.0
             )
+            return result
 
-            return resp["choices"][0]["message"]["content"]
-
+        except asyncio.TimeoutError:
+            log.error("OpenAI API call timed out after 60 seconds")
+            raise RuntimeError("LLM response timed out. Please try again.")
         except Exception as e:  # pragma: no cover - external call
             log.error(f"Failed to parse OpenAI response: {e}")
             raise

@@ -14,7 +14,7 @@ if max_workers_str:
 
 web_concurrency_str = os.getenv("WEB_CONCURRENCY", None)
 host = os.getenv("HOST", "0.0.0.0")
-port = os.getenv("PORT", "8000") 
+port = os.getenv("PORT", "8000")
 bind_env = os.getenv("BIND", None)
 use_loglevel = os.getenv("LOG_LEVEL", "info")
 
@@ -78,8 +78,8 @@ accesslog_var = os.getenv("ACCESS_LOG", "-")
 use_accesslog = accesslog_var or None
 errorlog_var = os.getenv("ERROR_LOG", "-")
 use_errorlog = errorlog_var or None
-graceful_timeout_str = os.getenv("GRACEFUL_TIMEOUT", "60")
-timeout_str = os.getenv("TIMEOUT", "60")
+graceful_timeout_str = os.getenv("GRACEFUL_TIMEOUT", "120")
+timeout_str = os.getenv("TIMEOUT", "120")
 keepalive_str = os.getenv("KEEP_ALIVE", "5")
 
 # Gunicorn config variables

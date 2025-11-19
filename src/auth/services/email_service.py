@@ -1,3 +1,4 @@
+import asyncio
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -107,15 +108,23 @@ class EmailService:
             msg.attach(part1)
             msg.attach(part2)
 
-            # Send email
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_username, self.smtp_password)
-                server.send_message(msg)
+            # Send email in thread pool to avoid blocking (with 10 second timeout)
+            def _send_smtp() -> None:
+                with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=10) as server:
+                    server.starttls()
+                    server.login(self.smtp_username, self.smtp_password)
+                    server.send_message(msg)
+
+            await asyncio.wait_for(
+                asyncio.to_thread(_send_smtp), timeout=15.0  # 15 second total timeout
+            )
 
             log.info(f"OTP email sent successfully to {to_email}")
             return True
 
+        except asyncio.TimeoutError:
+            log.error("Email sending timed out after 15 seconds")
+            return False
         except smtplib.SMTPAuthenticationError:
             log.error("SMTP authentication failed. Check username and password.")
             return False

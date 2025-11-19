@@ -13,7 +13,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.utils.logger import logger
 from src.config import settings
-import smtplib
 
 log = logger(__name__)
 
@@ -25,8 +24,7 @@ def check_env_vars() -> bool:
     required_vars = [
         ("DB_URI", settings.db_uri),
         ("JWT_SECRET_KEY", settings.jwt_secret_key),
-        ("SMTP_USERNAME", settings.smtp_username),
-        ("SMTP_PASSWORD", settings.smtp_password),
+        ("MAILERSEND_API_KEY", settings.mailersend_api_key),
         ("SMTP_FROM_EMAIL", settings.smtp_from_email),
     ]
 
@@ -66,22 +64,27 @@ async def check_database() -> bool:
         return False
 
 
-def check_smtp() -> bool:
-    """Check SMTP connection."""
-    log.info("Checking SMTP connection...")
+def check_mailersend() -> bool:
+    """Check MailerSend API key configuration."""
+    log.info("Checking MailerSend configuration...")
 
     try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as server:
-            server.starttls()
-            server.login(settings.smtp_username, settings.smtp_password)
-            log.info("✅ SMTP connection successful")
-            return True
+        if not settings.mailersend_api_key:
+            log.error("❌ MailerSend API key is not set")
+            return False
 
-    except smtplib.SMTPAuthenticationError:
-        log.error("❌ SMTP authentication failed - check username/password")
+        from mailersend import MailerSendClient
+
+        # Just verify we can create a client
+        MailerSendClient(api_key=settings.mailersend_api_key)
+        log.info("✅ MailerSend client initialized successfully")
+        return True
+
+    except ImportError:
+        log.error("❌ MailerSend package not installed")
         return False
     except Exception as e:
-        log.error(f"❌ SMTP connection failed: {str(e)}")
+        log.error(f"❌ MailerSend initialization failed: {str(e)}")
         return False
 
 
@@ -150,7 +153,7 @@ async def main() -> None:
     results.append(("Services", await check_services()))
     results.append(("Routes", await check_routes()))
     results.append(("Database Connection", await check_database()))
-    results.append(("SMTP Connection", check_smtp()))
+    results.append(("MailerSend Configuration", check_mailersend()))
 
     # Summary
     log.info("=" * 60)
@@ -182,7 +185,7 @@ async def main() -> None:
         log.info("Common fixes:")
         log.info("- Environment variables: Copy .env.example to .env and configure")
         log.info("- Database: Ensure PostgreSQL is running and DB exists")
-        log.info("- SMTP: Use Gmail App Password, not regular password")
+        log.info("- MailerSend: Get API key from mailersend.com and verify domain")
         sys.exit(1)
 
 

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
 
     # Email Configuration (REQUIRED for OTP emails in production)
-    resend_api_key: str = ""  # Required for production, optional for tests
+    mailersend_api_key: str = ""  # Required for production, optional for tests
     smtp_from_email: str = "noreply@example.com"
     smtp_from_name: str = "Astro Server"
 
@@ -40,4 +40,4 @@ class Settings(BaseSettings):
     base_url: str = "http://localhost:8000"
 
 
-settings = Settings()
+settings = Settings(_env_file=".env")

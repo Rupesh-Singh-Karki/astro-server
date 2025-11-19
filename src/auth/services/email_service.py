@@ -108,28 +108,55 @@ class EmailService:
             msg.attach(part1)
             msg.attach(part2)
 
-            # Send email in thread pool to avoid blocking (with 10 second timeout)
+            # Try STARTTLS first (port 587), then SSL (port 465) as fallback
             def _send_smtp() -> None:
-                with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=10) as server:
-                    server.starttls()
-                    server.login(self.smtp_username, self.smtp_password)
-                    server.send_message(msg)
+                last_error = None
+                
+                # Try port 587 with STARTTLS
+                try:
+                    log.info(f"Attempting SMTP connection to {self.smtp_host}:{self.smtp_port}")
+                    with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=10) as server:
+                        server.starttls()
+                        server.login(self.smtp_username, self.smtp_password)
+                        server.send_message(msg)
+                    log.info("Email sent successfully via STARTTLS (port 587)")
+                    return
+                except Exception as e:
+                    last_error = e
+                    log.warning(f"STARTTLS (port 587) failed: {str(e)}, trying SSL...")
+                
+                # Fallback to port 465 with SSL
+                try:
+                    log.info(f"Attempting SMTP_SSL connection to {self.smtp_host}:465")
+                    with smtplib.SMTP_SSL(self.smtp_host, 465, timeout=10) as server:
+                        server.login(self.smtp_username, self.smtp_password)
+                        server.send_message(msg)
+                    log.info("Email sent successfully via SSL (port 465)")
+                    return
+                except Exception as e:
+                    log.error(f"SSL (port 465) also failed: {str(e)}")
+                    if last_error:
+                        raise last_error
+                    raise e
 
             await asyncio.wait_for(
-                asyncio.to_thread(_send_smtp), timeout=15.0  # 15 second total timeout
+                asyncio.to_thread(_send_smtp), timeout=20.0  # 20 second total timeout
             )
 
             log.info(f"OTP email sent successfully to {to_email}")
             return True
 
         except asyncio.TimeoutError:
-            log.error("Email sending timed out after 15 seconds")
+            log.error("Email sending timed out after 20 seconds")
             return False
         except smtplib.SMTPAuthenticationError:
             log.error("SMTP authentication failed. Check username and password.")
             return False
         except smtplib.SMTPException as e:
             log.error(f"SMTP error occurred while sending email: {str(e)}")
+            return False
+        except OSError as e:
+            log.error(f"Network error sending email: {str(e)}. Check firewall/network restrictions.")
             return False
         except Exception as e:
             log.error(f"Unexpected error sending email: {str(e)}")

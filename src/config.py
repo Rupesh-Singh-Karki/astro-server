@@ -23,12 +23,9 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 720
     jwt_refresh_token_expire_days: int = 7
 
-    # SMTP Configuration
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_username: str
-    smtp_password: str
-    smtp_from_email: str
+    # Email Configuration (REQUIRED for OTP emails in production)
+    resend_api_key: str = ""  # Required for production, optional for tests
+    smtp_from_email: str = "noreply@example.com"
     smtp_from_name: str = "Astro Server"
 
     # OTP Configuration

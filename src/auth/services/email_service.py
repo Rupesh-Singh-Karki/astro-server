@@ -1,7 +1,7 @@
 import asyncio
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+from typing import Any, Dict
+
+import resend
 
 from src.config import settings
 from src.utils.logger import logger
@@ -10,15 +10,21 @@ log = logger(__name__)
 
 
 class EmailService:
-    """Service for sending emails via SMTP."""
+    """Service for sending emails via Resend."""
 
     def __init__(self) -> None:
-        self.smtp_host = settings.smtp_host
-        self.smtp_port = settings.smtp_port
-        self.smtp_username = settings.smtp_username
-        self.smtp_password = settings.smtp_password
         self.from_email = settings.smtp_from_email
         self.from_name = settings.smtp_from_name
+
+        # Configure Resend
+        if not settings.resend_api_key:
+            log.warning(
+                "RESEND_API_KEY not set - email sending will fail in production"
+            )
+            return
+
+        resend.api_key = settings.resend_api_key
+        log.info("Email service initialized with Resend")
 
     def _create_otp_email_html(self, otp: str, expires_in_minutes: int) -> str:
         """Create HTML content for OTP email."""
@@ -82,7 +88,7 @@ class EmailService:
         self, to_email: str, otp: str, expires_in_minutes: int
     ) -> bool:
         """
-        Send OTP email to the specified address.
+        Send OTP email to the specified address using Resend.
 
         Args:
             to_email: Recipient email address
@@ -92,74 +98,40 @@ class EmailService:
         Returns:
             True if email sent successfully, False otherwise
         """
+        if not settings.resend_api_key:
+            log.error("Cannot send email: RESEND_API_KEY not configured")
+            return False
+
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = f"Your Verification Code - {self.from_name}"
-            msg["From"] = f"{self.from_name} <{self.from_email}>"
-            msg["To"] = to_email
-
-            # Create both plain text and HTML versions
-            text_content = self._create_otp_email_text(otp, expires_in_minutes)
             html_content = self._create_otp_email_html(otp, expires_in_minutes)
+            text_content = self._create_otp_email_text(otp, expires_in_minutes)
 
-            part1 = MIMEText(text_content, "plain")
-            part2 = MIMEText(html_content, "html")
+            # Send email in thread pool to avoid blocking
+            def _send_resend() -> Dict[str, Any]:
+                params: Dict[str, Any] = {
+                    "from": f"{self.from_name} <{self.from_email}>",
+                    "to": [to_email],
+                    "subject": f"Your Verification Code - {self.from_name}",
+                    "html": html_content,
+                    "text": text_content,
+                }
+                result = resend.Emails.send(params)
+                return result
 
-            msg.attach(part1)
-            msg.attach(part2)
-
-            # Try STARTTLS first (port 587), then SSL (port 465) as fallback
-            def _send_smtp() -> None:
-                last_error = None
-                
-                # Try port 587 with STARTTLS
-                try:
-                    log.info(f"Attempting SMTP connection to {self.smtp_host}:{self.smtp_port}")
-                    with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=10) as server:
-                        server.starttls()
-                        server.login(self.smtp_username, self.smtp_password)
-                        server.send_message(msg)
-                    log.info("Email sent successfully via STARTTLS (port 587)")
-                    return
-                except Exception as e:
-                    last_error = e
-                    log.warning(f"STARTTLS (port 587) failed: {str(e)}, trying SSL...")
-                
-                # Fallback to port 465 with SSL
-                try:
-                    log.info(f"Attempting SMTP_SSL connection to {self.smtp_host}:465")
-                    with smtplib.SMTP_SSL(self.smtp_host, 465, timeout=10) as server:
-                        server.login(self.smtp_username, self.smtp_password)
-                        server.send_message(msg)
-                    log.info("Email sent successfully via SSL (port 465)")
-                    return
-                except Exception as e:
-                    log.error(f"SSL (port 465) also failed: {str(e)}")
-                    if last_error:
-                        raise last_error
-                    raise e
-
-            await asyncio.wait_for(
-                asyncio.to_thread(_send_smtp), timeout=20.0  # 20 second total timeout
+            result = await asyncio.wait_for(
+                asyncio.to_thread(_send_resend), timeout=10.0
             )
 
-            log.info(f"OTP email sent successfully to {to_email}")
+            log.info(
+                f"OTP email sent successfully via Resend to {to_email} (ID: {result.get('id', 'unknown')})"
+            )
             return True
 
         except asyncio.TimeoutError:
-            log.error("Email sending timed out after 20 seconds")
-            return False
-        except smtplib.SMTPAuthenticationError:
-            log.error("SMTP authentication failed. Check username and password.")
-            return False
-        except smtplib.SMTPException as e:
-            log.error(f"SMTP error occurred while sending email: {str(e)}")
-            return False
-        except OSError as e:
-            log.error(f"Network error sending email: {str(e)}. Check firewall/network restrictions.")
+            log.error("Resend email sending timed out after 10 seconds")
             return False
         except Exception as e:
-            log.error(f"Unexpected error sending email: {str(e)}")
+            log.error(f"Resend email error: {str(e)}")
             return False
 
 

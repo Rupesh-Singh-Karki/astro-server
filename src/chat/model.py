@@ -18,7 +18,7 @@ class MessageSenderEnum(str, PyEnum):
 
 
 class ChatSession(SQLModel, table=True):  # type: ignore[call-arg]
-    """Chat session model."""
+    """Model for storing chat sessions."""
 
     __tablename__ = "chat_sessions"
 

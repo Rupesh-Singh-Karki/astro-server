@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     otp_length: int = 6
     otp_expire_minutes: int = 10
     otp_max_attempts: int = 5
+    bypass_otp_validation: bool = (
+        False  # Set to True for prototype/dev to skip OTP validation
+    )
 
     # Server Configuration
     port: int = 10000
@@ -40,4 +43,4 @@ class Settings(BaseSettings):
     base_url: str = "http://localhost:8000"
 
 
-settings = Settings(_env_file=".env")
+settings = Settings()

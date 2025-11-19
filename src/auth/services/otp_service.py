@@ -86,6 +86,14 @@ class OTPService:
         Returns:
             Tuple of (is_valid: bool, error_message: Optional[str])
         """
+        # BYPASS MODE: Skip OTP validation for prototype/development
+        if settings.bypass_otp_validation:
+            log.warning(
+                f"⚠️  BYPASS MODE ACTIVE: OTP validation skipped for {email}. "
+                "This should only be used in development/prototype environments!"
+            )
+            return True, None
+
         # Get the most recent unused OTP for this email
         stmt = (
             select(OTPCode)
